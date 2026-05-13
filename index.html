@@ -231,9 +231,18 @@ button {
   background: #000;
 }
 #ytPlayer,
-#ytPlayer iframe {
+#ytPlayer iframe,
+#localPlayer {
   width: 100% !important;
   height: 100% !important;
+}
+#localPlayer {
+  display: block;
+  background: #000;
+  object-fit: contain;
+}
+.player-hidden {
+  display: none !important;
 }
 .yt-placeholder {
   position: absolute;
@@ -446,6 +455,45 @@ input[type="range"]::-moz-range-thumb {
 .time-input:focus {
   border-color: var(--cyan);
 }
+.file-pick {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  margin-top: 10px;
+  border: 1px dashed rgba(255,255,255,0.24);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.05);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 800;
+  overflow: hidden;
+}
+.file-pick input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.source-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  color: rgba(247,247,244,0.36);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.source-divider::before,
+.source-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: rgba(255,255,255,0.12);
+}
 .ab-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -523,6 +571,11 @@ input[type="range"]::-moz-range-thumb {
   <div class="modal-box">
     <div class="modal-title">見本動画とAB区間</div>
     <input class="modal-input" id="urlInput" type="text" placeholder="YouTube URL または 動画ID">
+    <div class="source-divider">or local file</div>
+    <label class="file-pick">
+      <span id="filePickLabel">iPad内の動画を選ぶ</span>
+      <input id="fileInput" type="file" accept="video/*">
+    </label>
     <div class="ab-grid">
       <div class="field">
         <label for="startTime">A 開始</label>
@@ -568,6 +621,7 @@ input[type="range"]::-moz-range-thumb {
     </div>
     <div class="lesson-video">
       <div id="ytPlayer"></div>
+      <video id="localPlayer" class="player-hidden" controls playsinline></video>
       <button class="yt-placeholder" id="ytPlaceholder" type="button" onclick="openSettings()">
         <span class="play-mark">▶</span>
         <span class="placeholder-label">見本動画を読み込む</span>
@@ -615,6 +669,9 @@ var ytTimer = null;
 var ytDuration = 0;
 var ytLooping = false;
 var ytSeeking = false;
+var referenceMode = 'none';
+var localObjectUrl = null;
+var localPlayer = document.getElementById('localPlayer');
 
 function onYouTubeIframeAPIReady() {}
 
@@ -649,7 +706,14 @@ function loadVideo() {
     error.textContent = '有効なYouTube URLまたは動画IDを入力してください';
     return;
   }
+  if (!ytPlayer && (!window.YT || !YT.Player)) {
+    error.textContent = 'YouTube再生にはネット接続が必要です。オフラインではiPad内の動画を選んでください';
+    return;
+  }
   error.textContent = '';
+  referenceMode = 'youtube';
+  clearLocalVideo();
+  document.getElementById('ytPlayer').classList.remove('player-hidden');
   document.getElementById('ytPlaceholder').classList.add('hidden');
   closeSettings();
   if (ytPlayer && ytPlayer.loadVideoById) {
@@ -660,6 +724,33 @@ function loadVideo() {
       playerVars: { playsinline: 1, rel: 0, modestbranding: 1 },
       events: { onReady: onYTReady, onStateChange: onYTState }
     });
+  }
+}
+function loadLocalVideo(file) {
+  if (!file) return;
+  referenceMode = 'local';
+  if (ytPlayer && ytPlayer.pauseVideo) ytPlayer.pauseVideo();
+  document.getElementById('ytPlayer').classList.add('player-hidden');
+  document.getElementById('ytPlaceholder').classList.add('hidden');
+  document.getElementById('ytError').textContent = '';
+  if (localObjectUrl) URL.revokeObjectURL(localObjectUrl);
+  localObjectUrl = URL.createObjectURL(file);
+  localPlayer.src = localObjectUrl;
+  localPlayer.classList.remove('player-hidden');
+  document.getElementById('filePickLabel').textContent = file.name;
+  closeSettings();
+  localPlayer.load();
+  localPlayer.play().catch(function() {});
+  startYTMonitor();
+}
+function clearLocalVideo() {
+  localPlayer.pause();
+  localPlayer.removeAttribute('src');
+  localPlayer.load();
+  localPlayer.classList.add('player-hidden');
+  if (localObjectUrl) {
+    URL.revokeObjectURL(localObjectUrl);
+    localObjectUrl = null;
   }
 }
 function onYTReady() {
@@ -675,8 +766,7 @@ function onYTState(event) {
   }
 }
 function refreshDuration() {
-  if (!ytPlayer || !ytPlayer.getDuration) return;
-  ytDuration = ytPlayer.getDuration() || ytDuration;
+  ytDuration = getReferenceDuration() || ytDuration;
   document.getElementById('durationTime').textContent = ytDuration ? formatTime(ytDuration) : '--:--';
   updateRegion();
 }
@@ -686,7 +776,7 @@ function toggleLoop() {
   document.getElementById('abBadge').classList.toggle('on', ytLooping);
   document.getElementById('loopBtn').textContent = ytLooping ? 'AB ON' : 'AB';
   document.getElementById('abBadge').textContent = ytLooping ? 'AB ON' : 'AB';
-  if (ytLooping && ytPlayer) {
+  if (ytLooping && hasReference()) {
     startYTMonitor();
     seekLoopStart();
   }
@@ -695,9 +785,10 @@ function toggleLoop() {
 function startYTMonitor() {
   if (ytTimer) clearInterval(ytTimer);
   ytTimer = setInterval(function() {
-    if (!ytPlayer || typeof ytPlayer.getCurrentTime !== 'function') return;
+    if (!hasReference()) return;
     refreshDuration();
-    var current = ytPlayer.getCurrentTime();
+    var current = getReferenceCurrentTime();
+    if (current === null) return;
     document.getElementById('currentTime').textContent = formatTime(current);
     if (ytDuration > 0) {
       document.getElementById('progressFill').style.width = clamp(current / ytDuration * 100, 0, 100) + '%';
@@ -722,19 +813,19 @@ function enforceLoop(current) {
   }
 }
 function seekLoopStart() {
-  if (!ytPlayer || !ytPlayer.seekTo) return;
+  if (!hasReference()) return;
   var range = getLoopRange();
   if (!range.valid) return;
   ytSeeking = true;
-  ytPlayer.seekTo(range.start, true);
-  ytPlayer.playVideo();
+  seekReference(range.start);
+  playReference();
   setTimeout(function() { ytSeeking = false; }, 900);
 }
 function seekByProgress(event) {
-  if (!ytPlayer || !ytDuration) return;
+  if (!hasReference() || !ytDuration) return;
   var rect = document.getElementById('progressTrack').getBoundingClientRect();
   var ratio = clamp((event.clientX - rect.left) / rect.width, 0, 1);
-  ytPlayer.seekTo(ratio * ytDuration, true);
+  seekReference(ratio * ytDuration);
 }
 function updateRegion() {
   var region = document.getElementById('progressRegion');
@@ -753,6 +844,51 @@ function updateRegion() {
 document.getElementById('urlInput').addEventListener('keydown', function(event) {
   if (event.key === 'Enter') loadVideo();
 });
+document.getElementById('fileInput').addEventListener('change', function(event) {
+  loadLocalVideo(event.target.files && event.target.files[0]);
+  event.target.value = '';
+});
+localPlayer.addEventListener('loadedmetadata', function() {
+  ytDuration = localPlayer.duration || 0;
+  refreshDuration();
+  updateRegion();
+});
+localPlayer.addEventListener('ended', function() {
+  if (ytLooping) seekLoopStart();
+});
+localPlayer.addEventListener('play', function() {
+  referenceMode = 'local';
+  startYTMonitor();
+});
+function hasReference() {
+  if (referenceMode === 'local') return !!localPlayer.src;
+  if (referenceMode === 'youtube') return !!(ytPlayer && typeof ytPlayer.getCurrentTime === 'function');
+  return false;
+}
+function getReferenceDuration() {
+  if (referenceMode === 'local') return isFinite(localPlayer.duration) ? localPlayer.duration : 0;
+  if (referenceMode === 'youtube' && ytPlayer && ytPlayer.getDuration) return ytPlayer.getDuration() || 0;
+  return 0;
+}
+function getReferenceCurrentTime() {
+  if (referenceMode === 'local') return localPlayer.currentTime || 0;
+  if (referenceMode === 'youtube' && ytPlayer && ytPlayer.getCurrentTime) return ytPlayer.getCurrentTime();
+  return null;
+}
+function seekReference(seconds) {
+  if (referenceMode === 'local') {
+    localPlayer.currentTime = seconds;
+  } else if (referenceMode === 'youtube' && ytPlayer && ytPlayer.seekTo) {
+    ytPlayer.seekTo(seconds, true);
+  }
+}
+function playReference() {
+  if (referenceMode === 'local') {
+    localPlayer.play().catch(function() {});
+  } else if (referenceMode === 'youtube' && ytPlayer && ytPlayer.playVideo) {
+    ytPlayer.playVideo();
+  }
+}
 
 var sizeMode = 1;
 function cycleLessonSize() {
@@ -947,6 +1083,11 @@ function pad(num) {
 }
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
+}
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('./sw.js').catch(function() {});
+  });
 }
 </script>
 </body>
