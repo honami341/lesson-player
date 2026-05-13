@@ -9,14 +9,16 @@
 <title>Lesson Player</title>
 <style>
 :root {
-  --bg: #050505;
-  --panel: #101113;
-  --bar: rgba(13, 14, 16, 0.96);
-  --line: rgba(255,255,255,0.1);
-  --text: #f6f6f7;
-  --muted: rgba(255,255,255,0.46);
-  --red: #ff3b30;
-  --green: #30d158;
+  --bg: #000;
+  --ink: #f7f7f4;
+  --dim: rgba(247,247,244,0.54);
+  --line: rgba(255,255,255,0.13);
+  --glass: rgba(11,12,14,0.78);
+  --glass-strong: rgba(16,17,20,0.92);
+  --red: #ff453a;
+  --green: #32d74b;
+  --amber: #ffd166;
+  --cyan: #64d2ff;
 }
 *, *::before, *::after {
   box-sizing: border-box;
@@ -30,174 +32,261 @@ html, body {
   height: 100dvh;
   overflow: hidden;
   background: var(--bg);
-  color: var(--text);
+  color: var(--ink);
   font-family: "Helvetica Neue", "Hiragino Sans", system-ui, sans-serif;
 }
 button, input {
   font: inherit;
 }
-.landscape-lock {
+button {
+  cursor: pointer;
+}
+.portrait-guard {
   display: none;
   position: fixed;
   inset: 0;
-  z-index: 1000;
-  background: #000;
-  color: var(--muted);
+  z-index: 999;
   align-items: center;
   justify-content: center;
+  background: #000;
   text-align: center;
+  padding: 28px;
+}
+.guard-panel {
+  max-width: 360px;
+}
+.guard-title {
+  font-size: 19px;
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+.guard-text {
+  color: var(--dim);
+  font-size: 14px;
   line-height: 1.7;
-  padding: 24px;
 }
-.landscape-lock strong {
-  display: block;
-  color: var(--text);
-  font-size: 18px;
-  margin-bottom: 8px;
-}
-@media (orientation: landscape) {
-  .landscape-lock { display: flex; }
+@media (orientation: portrait) {
+  .portrait-guard { display: flex; }
   .app { display: none; }
 }
 .app {
+  position: relative;
+  width: 100%;
   height: 100%;
   height: 100dvh;
-  display: grid;
-  grid-template-rows: 1fr 1fr;
-  padding-top: env(safe-area-inset-top, 0);
-  padding-bottom: env(safe-area-inset-bottom, 0);
-  background: #000;
-}
-.pane {
-  min-height: 0;
-  display: grid;
-  grid-template-rows: 36px 1fr 38px;
-  background: #000;
-}
-.pane + .pane {
-  border-top: 2px solid rgba(255,255,255,0.16);
-}
-.toolbar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  height: 36px;
-  padding: 0 8px;
-  background: var(--bar);
-  border-bottom: 1px solid var(--line);
-}
-.title {
-  flex: 1;
-  min-width: 0;
-  color: var(--muted);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-.btn {
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  background: rgba(255,255,255,0.08);
-  color: var(--text);
-  padding: 5px 9px;
-  min-height: 28px;
-  font-size: 11px;
-  font-weight: 650;
-  white-space: nowrap;
-  cursor: pointer;
-}
-.btn.active {
-  background: var(--red);
-  border-color: var(--red);
-}
-.btn.go {
-  background: var(--green);
-  border-color: var(--green);
-  color: #061006;
-}
-.btn.stop {
-  background: #303134;
-  border-color: #3f4044;
-}
-.stage {
-  min-height: 0;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   overflow: hidden;
   background: #000;
 }
-.wide-frame {
-  width: 100%;
-  max-height: 100%;
-  aspect-ratio: 16 / 9;
-  background: #000;
-}
-#yt-player iframe {
-  width: 100% !important;
-  height: 100% !important;
-}
-.placeholder,
-.cam-cover {
+.mirror-stage {
   position: absolute;
   inset: 0;
-  z-index: 5;
+  background: #000;
+}
+#liveVideo {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+#mirrorCanvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: #000;
+}
+.camera-start {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 20px;
-  background: #070707;
-  text-align: center;
+  gap: 14px;
+  background: rgba(0,0,0,0.88);
 }
-.placeholder.hidden,
-.cam-cover.hidden {
+.camera-start.hidden {
   display: none;
 }
-.placeholder-mark {
-  width: 44px;
-  height: 44px;
+.start-button {
+  border: 0;
+  border-radius: 999px;
+  background: var(--green);
+  color: #031006;
+  padding: 14px 38px;
+  font-size: 16px;
+  font-weight: 800;
+}
+.start-copy {
+  color: var(--dim);
+  font-size: 12px;
+}
+.error {
+  min-height: 16px;
+  color: #ff8b85;
+  font-size: 12px;
+}
+.status-chip {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top, 0px));
+  right: max(14px, env(safe-area-inset-right, 0px));
+  z-index: 8;
+  display: none;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+.status-chip.show {
+  display: flex;
+}
+.status-dot {
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
+  background: var(--red);
+}
+.lesson-window {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top, 0px));
+  left: max(12px, env(safe-area-inset-left, 0px));
+  z-index: 20;
+  width: clamp(330px, 42vw, 560px);
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.16);
+  border-radius: 10px;
+  background: var(--glass-strong);
+  box-shadow: 0 18px 50px rgba(0,0,0,0.56), 0 0 0 1px rgba(255,255,255,0.04);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+.lesson-window.right {
+  left: auto;
+  right: max(12px, env(safe-area-inset-right, 0px));
+}
+.lesson-window.compact {
+  width: clamp(260px, 31vw, 410px);
+}
+.lesson-window.large {
+  width: clamp(430px, 52vw, 690px);
+}
+.lesson-head {
+  height: 34px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+}
+.lesson-title {
+  flex: 1;
+  min-width: 0;
+  color: var(--dim);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.btn {
+  min-height: 25px;
+  border: 1px solid rgba(255,255,255,0.13);
+  border-radius: 6px;
+  background: rgba(255,255,255,0.08);
+  color: var(--ink);
+  padding: 4px 9px;
+  font-size: 11px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+.btn:active {
+  transform: scale(0.97);
+}
+.btn.active {
+  border-color: rgba(255,69,58,0.78);
+  background: rgba(255,69,58,0.24);
+  color: #ff9a92;
+}
+.btn.go {
+  border-color: var(--green);
+  background: var(--green);
+  color: #031006;
+}
+.btn.stop {
+  border-color: #555;
+  background: rgba(255,255,255,0.12);
+}
+.lesson-video {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: #000;
+}
+#ytPlayer,
+#ytPlayer iframe {
+  width: 100% !important;
+  height: 100% !important;
+}
+.yt-placeholder {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  background: #060708;
+  color: var(--dim);
+}
+.yt-placeholder.hidden {
+  display: none;
+}
+.play-mark {
+  width: 42px;
+  height: 42px;
   display: grid;
   place-items: center;
+  border-radius: 50%;
   background: rgba(255,255,255,0.08);
   color: var(--red);
   font-size: 18px;
 }
-.placeholder-text,
-.cover-text {
-  color: var(--muted);
+.placeholder-label {
   font-size: 12px;
-  line-height: 1.55;
+  font-weight: 700;
 }
-.strip {
-  height: 38px;
-  min-width: 0;
+.lesson-progress {
+  height: 34px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   padding: 0 8px;
-  background: var(--bar);
-  border-top: 1px solid var(--line);
+  border-top: 1px solid rgba(255,255,255,0.1);
+  background: rgba(0,0,0,0.28);
 }
 .time {
-  color: var(--muted);
-  font-size: 11px;
+  color: var(--dim);
+  font-size: 10px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 .track {
-  flex: 1;
-  height: 5px;
-  min-width: 44px;
   position: relative;
+  flex: 1;
+  min-width: 54px;
+  height: 5px;
   border-radius: 4px;
-  background: rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.16);
   cursor: pointer;
 }
 .region,
@@ -210,263 +299,308 @@ button, input {
   pointer-events: none;
 }
 .region {
-  background: rgba(255,59,48,0.28);
+  background: rgba(255,209,102,0.28);
 }
 .fill {
   width: 0%;
   background: var(--red);
 }
-.badge {
-  color: var(--muted);
-  font-size: 10px;
-  font-weight: 800;
+.ab-badge {
+  color: var(--dim);
+  font-size: 9px;
+  font-weight: 900;
   letter-spacing: 0.08em;
   white-space: nowrap;
 }
-.badge.on {
-  color: var(--red);
+.ab-badge.on {
+  color: var(--amber);
 }
-#liveVideo {
+.control-rail {
   position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
-  pointer-events: none;
-}
-#cam-canvas {
-  display: block;
-}
-.delay-chip {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  z-index: 4;
-  display: none;
-  align-items: center;
-  gap: 6px;
-  border-radius: 999px;
-  background: rgba(0,0,0,0.62);
-  border: 1px solid rgba(255,255,255,0.08);
-  padding: 5px 10px;
-  font-size: 11px;
-  font-weight: 700;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-}
-.delay-chip.show {
+  left: env(safe-area-inset-left, 0px);
+  right: env(safe-area-inset-right, 0px);
+  bottom: 0;
+  z-index: 18;
+  min-height: 54px;
   display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px max(8px, env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--line);
+  background: var(--glass);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 }
-.dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--red);
+.brand {
+  display: flex;
+  flex-direction: column;
+  min-width: 78px;
 }
-.cover-error {
-  min-height: 14px;
-  color: #ff8580;
+.brand-main {
   font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
-.delay-label {
-  color: var(--muted);
+.brand-sub {
+  margin-top: 2px;
+  color: var(--dim);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+}
+.rail-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.delay-control {
+  flex: 1;
+  min-width: 160px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.rail-label {
+  color: var(--dim);
   font-size: 10px;
-  font-weight: 800;
+  font-weight: 900;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   white-space: nowrap;
 }
 input[type="range"] {
   flex: 1;
-  min-width: 60px;
+  min-width: 80px;
   height: 4px;
   border: 0;
   border-radius: 4px;
-  background: rgba(255,255,255,0.16);
+  outline: none;
   appearance: none;
   -webkit-appearance: none;
-  outline: none;
+  background: rgba(255,255,255,0.18);
 }
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.45);
+  background: var(--ink);
+  box-shadow: 0 2px 9px rgba(0,0,0,0.55);
 }
 input[type="range"]::-moz-range-thumb {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border: 0;
   border-radius: 50%;
-  background: #fff;
+  background: var(--ink);
 }
 .delay-value {
-  min-width: 32px;
+  min-width: 34px;
   text-align: right;
-  font-size: 13px;
-  font-weight: 800;
+  font-size: 14px;
+  font-weight: 900;
   font-variant-numeric: tabular-nums;
 }
 .modal {
   position: fixed;
   inset: 0;
-  z-index: 50;
+  z-index: 80;
   display: none;
   align-items: center;
   justify-content: center;
   padding: 18px;
   background: rgba(0,0,0,0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 .modal.open {
   display: flex;
 }
 .modal-box {
-  width: min(100%, 420px);
-  border-radius: 8px;
-  background: #17181b;
-  border: 1px solid var(--line);
-  padding: 16px;
+  width: min(440px, 92vw);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 10px;
+  background: #18191d;
+  padding: 17px;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.55);
 }
 .modal-title {
   margin-bottom: 12px;
-  font-size: 14px;
-  font-weight: 800;
+  font-size: 15px;
+  font-weight: 900;
 }
 .modal-input,
 .time-input {
   width: 100%;
-  border: 1px solid #34363a;
+  border: 1px solid #383a40;
   border-radius: 7px;
-  background: #232529;
-  color: var(--text);
+  background: #24262b;
+  color: var(--ink);
   outline: none;
 }
 .modal-input {
-  padding: 10px 11px;
+  padding: 11px 12px;
   font-size: 14px;
 }
 .modal-input:focus,
 .time-input:focus {
-  border-color: var(--red);
+  border-color: var(--cyan);
 }
-.ab-settings {
+.ab-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
-  margin-top: 10px;
+  margin-top: 11px;
 }
 .field label {
   display: block;
   margin-bottom: 5px;
-  color: var(--muted);
+  color: var(--dim);
   font-size: 10px;
-  font-weight: 800;
+  font-weight: 900;
   letter-spacing: 0.1em;
 }
 .time-input {
-  padding: 8px 9px;
+  padding: 9px 10px;
   text-align: center;
-  font-size: 13px;
+  font-size: 14px;
+}
+.hint {
+  margin-top: 10px;
+  color: rgba(247,247,244,0.42);
+  font-size: 11px;
+  line-height: 1.55;
 }
 .modal-error {
   min-height: 16px;
   margin-top: 8px;
-  color: #ff8580;
+  color: #ff8b85;
   font-size: 11px;
 }
 .modal-actions {
   display: flex;
-  justify-content: flex-end;
   gap: 8px;
   margin-top: 12px;
 }
 .modal-actions .btn {
-  min-width: 82px;
+  flex: 1;
+  min-height: 34px;
+}
+@media (max-width: 760px) and (orientation: landscape) {
+  .lesson-window {
+    width: clamp(270px, 46vw, 410px);
+  }
+  .lesson-window.large {
+    width: clamp(330px, 56vw, 500px);
+  }
+  .control-rail {
+    gap: 7px;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+  .brand {
+    min-width: 0;
+  }
+  .brand-sub {
+    display: none;
+  }
+  .btn {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
 }
 </style>
 </head>
 <body>
-<div class="landscape-lock">
-  <div>
-    <strong>縦向きで使います</strong>
-    iPadを縦にして、上に見本、下に自分の稽古を表示します。
+<div class="portrait-guard">
+  <div class="guard-panel">
+    <div class="guard-title">iPadを横向きにしてください</div>
+    <div class="guard-text">この画面は、自分の稽古映像を横長で確認するための横画面専用レイアウトです。</div>
   </div>
 </div>
 
-<div class="modal" id="lesson-modal" onclick="modalBackdrop(event)">
+<div class="modal" id="settingsModal" onclick="handleModalBackdrop(event)">
   <div class="modal-box">
-    <div class="modal-title">見本動画を設定</div>
-    <input class="modal-input" id="url-input" type="text" placeholder="YouTube URL または 11文字の動画ID">
-    <div class="ab-settings">
+    <div class="modal-title">見本動画とAB区間</div>
+    <input class="modal-input" id="urlInput" type="text" placeholder="YouTube URL または 動画ID">
+    <div class="ab-grid">
       <div class="field">
-        <label for="start-time">A 開始</label>
-        <input class="time-input" id="start-time" type="text" value="0:00" placeholder="0:00">
+        <label for="startTime">A 開始</label>
+        <input class="time-input" id="startTime" type="text" value="0:00" placeholder="0:00">
       </div>
       <div class="field">
-        <label for="end-time">B 終了</label>
-        <input class="time-input" id="end-time" type="text" placeholder="終端">
+        <label for="endTime">B 終了</label>
+        <input class="time-input" id="endTime" type="text" placeholder="終端">
       </div>
     </div>
-    <div class="modal-error" id="yt-error"></div>
+    <div class="hint">時間は「1:30」「90」「１：３０」で入力できます。Bを空欄にすると動画の最後まで使います。</div>
+    <div class="modal-error" id="ytError"></div>
     <div class="modal-actions">
-      <button class="btn" type="button" onclick="closeLessonModal()">閉じる</button>
-      <button class="btn active" type="button" onclick="loadLessonVideo()">読込</button>
+      <button class="btn" type="button" onclick="closeSettings()">閉じる</button>
+      <button class="btn active" type="button" onclick="loadVideo()">読み込む</button>
     </div>
   </div>
 </div>
 
 <main class="app">
-  <section class="pane">
-    <div class="toolbar">
-      <div class="title">見本</div>
-      <button class="btn" type="button" onclick="openLessonModal()">URL</button>
-      <button class="btn" id="loop-btn" type="button" onclick="toggleLoop()">AB</button>
-    </div>
-    <div class="stage">
-      <div id="yt-player" class="wide-frame"></div>
-      <button class="placeholder" id="yt-placeholder" type="button" onclick="openLessonModal()">
-        <span class="placeholder-mark">▶</span>
-        <span class="placeholder-text">見本のYouTube動画を読み込む</span>
-      </button>
-    </div>
-    <div class="strip">
-      <span class="time" id="current-time">0:00</span>
-      <div class="track" id="progress-track" onclick="seekByClick(event)">
-        <div class="region" id="progress-region"></div>
-        <div class="fill" id="progress-fill"></div>
-      </div>
-      <span class="time" id="duration-time">--:--</span>
-      <span class="badge" id="loop-badge">AB</span>
+  <section class="mirror-stage">
+    <video id="liveVideo" autoplay playsinline muted></video>
+    <canvas id="mirrorCanvas"></canvas>
+    <div class="camera-start" id="cameraStart">
+      <button class="start-button" type="button" onclick="toggleCamera()">カメラ開始</button>
+      <div class="start-copy">遅れて映る自分の動きを、横画面いっぱいで確認します</div>
+      <div class="error" id="cameraError"></div>
     </div>
   </section>
 
-  <section class="pane">
-    <div class="toolbar">
-      <div class="title">自分の稽古</div>
-      <button class="btn active" id="mirror-btn" type="button" onclick="toggleMirror()">反転</button>
-      <button class="btn" type="button" onclick="switchCamera()">切替</button>
-      <button class="btn go" id="camera-btn" type="button" onclick="toggleCamera()">開始</button>
+  <div class="status-chip" id="delayChip">
+    <span class="status-dot"></span>
+    <span id="delayChipText">10s 遅延</span>
+  </div>
+
+  <aside class="lesson-window" id="lessonWindow">
+    <div class="lesson-head">
+      <div class="lesson-title">Lesson Reference</div>
+      <button class="btn" type="button" onclick="openSettings()">URL</button>
+      <button class="btn" id="loopBtn" type="button" onclick="toggleLoop()">AB</button>
+      <button class="btn" id="sizeBtn" type="button" onclick="cycleLessonSize()">小窓</button>
+      <button class="btn" type="button" onclick="toggleDock()">左右</button>
     </div>
-    <div class="stage">
-      <video id="liveVideo" autoplay playsinline muted></video>
-      <canvas id="cam-canvas" class="wide-frame"></canvas>
-      <div class="delay-chip" id="delay-chip">
-        <span class="dot"></span>
-        <span id="delay-chip-text">10s 遅延</span>
+    <div class="lesson-video">
+      <div id="ytPlayer"></div>
+      <button class="yt-placeholder" id="ytPlaceholder" type="button" onclick="openSettings()">
+        <span class="play-mark">▶</span>
+        <span class="placeholder-label">見本動画を読み込む</span>
+      </button>
+    </div>
+    <div class="lesson-progress">
+      <span class="time" id="currentTime">0:00</span>
+      <div class="track" id="progressTrack" onclick="seekByProgress(event)">
+        <div class="region" id="progressRegion"></div>
+        <div class="fill" id="progressFill"></div>
       </div>
-      <div class="cam-cover" id="cam-cover">
-        <button class="btn go" type="button" onclick="toggleCamera()">カメラ開始</button>
-        <div class="cover-text">遅れて映る自分の動きを見ながら稽古できます</div>
-        <div class="cover-error" id="camera-error"></div>
-      </div>
+      <span class="time" id="durationTime">--:--</span>
+      <span class="ab-badge" id="abBadge">AB</span>
     </div>
-    <div class="strip">
-      <span class="delay-label">遅延</span>
-      <input id="delay-slider" type="range" min="2" max="30" step="1" value="10">
-      <span class="delay-value" id="delay-value">10s</span>
+  </aside>
+
+  <nav class="control-rail">
+    <div class="brand">
+      <div class="brand-main">Lesson Player</div>
+      <div class="brand-sub">Mirror first</div>
     </div>
-  </section>
+    <div class="rail-group">
+      <button class="btn active" id="mirrorBtn" type="button" onclick="toggleMirror()">反転</button>
+      <button class="btn" type="button" onclick="switchCamera()">カメラ</button>
+      <button class="btn" id="fitBtn" type="button" onclick="toggleFitMode()">全身</button>
+    </div>
+    <div class="delay-control">
+      <span class="rail-label">Delay</span>
+      <input id="delaySlider" type="range" min="2" max="30" step="1" value="10">
+      <span class="delay-value" id="delayValue">10s</span>
+    </div>
+    <button class="btn go" id="cameraBtn" type="button" onclick="toggleCamera()">開始</button>
+  </nav>
 </main>
 
 <script>
@@ -479,19 +613,20 @@ input[type="range"]::-moz-range-thumb {
 var ytPlayer = null;
 var ytTimer = null;
 var ytDuration = 0;
-var looping = false;
+var ytLooping = false;
+var ytSeeking = false;
 
 function onYouTubeIframeAPIReady() {}
 
-function openLessonModal() {
-  document.getElementById('lesson-modal').classList.add('open');
-  setTimeout(function() { document.getElementById('url-input').focus(); }, 60);
+function openSettings() {
+  document.getElementById('settingsModal').classList.add('open');
+  setTimeout(function() { document.getElementById('urlInput').focus(); }, 60);
 }
-function closeLessonModal() {
-  document.getElementById('lesson-modal').classList.remove('open');
+function closeSettings() {
+  document.getElementById('settingsModal').classList.remove('open');
 }
-function modalBackdrop(event) {
-  if (event.target.id === 'lesson-modal') closeLessonModal();
+function handleModalBackdrop(event) {
+  if (event.target.id === 'settingsModal') closeSettings();
 }
 function extractVideoId(raw) {
   raw = (raw || '').trim();
@@ -507,157 +642,164 @@ function extractVideoId(raw) {
   }
   return null;
 }
-function loadLessonVideo() {
-  var videoId = extractVideoId(document.getElementById('url-input').value);
-  var err = document.getElementById('yt-error');
+function loadVideo() {
+  var videoId = extractVideoId(document.getElementById('urlInput').value);
+  var error = document.getElementById('ytError');
   if (!videoId) {
-    err.textContent = '有効なYouTube URLまたは動画IDを入力してください';
+    error.textContent = '有効なYouTube URLまたは動画IDを入力してください';
     return;
   }
-  err.textContent = '';
-  document.getElementById('yt-placeholder').classList.add('hidden');
+  error.textContent = '';
+  document.getElementById('ytPlaceholder').classList.add('hidden');
+  closeSettings();
   if (ytPlayer && ytPlayer.loadVideoById) {
     ytPlayer.loadVideoById(videoId);
   } else {
-    ytPlayer = new YT.Player('yt-player', {
+    ytPlayer = new YT.Player('ytPlayer', {
       videoId: videoId,
       playerVars: { playsinline: 1, rel: 0, modestbranding: 1 },
       events: { onReady: onYTReady, onStateChange: onYTState }
     });
   }
-  closeLessonModal();
 }
 function onYTReady() {
-  ytDuration = ytPlayer.getDuration() || 0;
-  updateDuration();
+  refreshDuration();
   startYTMonitor();
 }
 function onYTState(event) {
   if (event.data === YT.PlayerState.PLAYING) {
-    ytDuration = ytPlayer.getDuration() || ytDuration;
-    updateDuration();
-  } else if (event.data === YT.PlayerState.ENDED && looping) {
-    var range = getLoopRange();
-    if (range.valid) {
-      ytPlayer.seekTo(range.start, true);
-      ytPlayer.playVideo();
-    }
+    refreshDuration();
+    ytSeeking = false;
+  } else if (event.data === YT.PlayerState.ENDED && ytLooping) {
+    seekLoopStart();
   }
 }
+function refreshDuration() {
+  if (!ytPlayer || !ytPlayer.getDuration) return;
+  ytDuration = ytPlayer.getDuration() || ytDuration;
+  document.getElementById('durationTime').textContent = ytDuration ? formatTime(ytDuration) : '--:--';
+  updateRegion();
+}
 function toggleLoop() {
-  looping = !looping;
-  document.getElementById('loop-btn').classList.toggle('active', looping);
-  document.getElementById('loop-badge').classList.toggle('on', looping);
-  document.getElementById('loop-badge').textContent = looping ? 'AB ON' : 'AB';
-  if (looping && ytPlayer) {
+  ytLooping = !ytLooping;
+  document.getElementById('loopBtn').classList.toggle('active', ytLooping);
+  document.getElementById('abBadge').classList.toggle('on', ytLooping);
+  document.getElementById('loopBtn').textContent = ytLooping ? 'AB ON' : 'AB';
+  document.getElementById('abBadge').textContent = ytLooping ? 'AB ON' : 'AB';
+  if (ytLooping && ytPlayer) {
     startYTMonitor();
-    var range = getLoopRange();
-    ytPlayer.seekTo(range.start, true);
-    ytPlayer.playVideo();
+    seekLoopStart();
   }
   updateRegion();
 }
 function startYTMonitor() {
   if (ytTimer) clearInterval(ytTimer);
   ytTimer = setInterval(function() {
-    if (!ytPlayer || !ytPlayer.getCurrentTime) return;
+    if (!ytPlayer || typeof ytPlayer.getCurrentTime !== 'function') return;
+    refreshDuration();
     var current = ytPlayer.getCurrentTime();
-    ytDuration = ytPlayer.getDuration() || ytDuration;
-    document.getElementById('current-time').textContent = formatTime(current);
-    if (ytDuration) {
-      document.getElementById('progress-fill').style.width = (current / ytDuration * 100) + '%';
-      updateDuration();
+    document.getElementById('currentTime').textContent = formatTime(current);
+    if (ytDuration > 0) {
+      document.getElementById('progressFill').style.width = clamp(current / ytDuration * 100, 0, 100) + '%';
     }
-    if (looping) enforceLoop(current);
+    if (ytLooping) enforceLoop(current);
   }, 200);
 }
 function getLoopRange() {
-  var start = parseTime(document.getElementById('start-time').value);
-  var endRaw = document.getElementById('end-time').value.trim();
+  var start = parseTime(document.getElementById('startTime').value);
+  var endRaw = document.getElementById('endTime').value.trim();
   var end = endRaw ? parseTime(endRaw) : ytDuration;
   if (!isFinite(start) || start < 0) start = 0;
   if (!isFinite(end) || end <= 0 || end > ytDuration) end = ytDuration;
   return { start: start, end: end, valid: ytDuration > 0 && start < end };
 }
 function enforceLoop(current) {
+  if (ytSeeking) return;
   var range = getLoopRange();
   if (!range.valid) return;
-  if (current >= range.end - 0.08 || current < range.start - 0.5) {
-    ytPlayer.seekTo(range.start, true);
-    if (ytPlayer.getPlayerState && ytPlayer.getPlayerState() !== YT.PlayerState.PLAYING) {
-      ytPlayer.playVideo();
-    }
+  if (current >= range.end - 0.28 || current < range.start - 0.5) {
+    seekLoopStart();
   }
 }
-function updateDuration() {
-  document.getElementById('duration-time').textContent = ytDuration ? formatTime(ytDuration) : '--:--';
-  updateRegion();
+function seekLoopStart() {
+  if (!ytPlayer || !ytPlayer.seekTo) return;
+  var range = getLoopRange();
+  if (!range.valid) return;
+  ytSeeking = true;
+  ytPlayer.seekTo(range.start, true);
+  ytPlayer.playVideo();
+  setTimeout(function() { ytSeeking = false; }, 900);
 }
-function seekByClick(event) {
+function seekByProgress(event) {
   if (!ytPlayer || !ytDuration) return;
-  var rect = document.getElementById('progress-track').getBoundingClientRect();
-  var ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+  var rect = document.getElementById('progressTrack').getBoundingClientRect();
+  var ratio = clamp((event.clientX - rect.left) / rect.width, 0, 1);
   ytPlayer.seekTo(ratio * ytDuration, true);
 }
 function updateRegion() {
-  var region = document.getElementById('progress-region');
+  var region = document.getElementById('progressRegion');
   if (!ytDuration) {
     region.style.left = '0%';
     region.style.width = '0%';
     return;
   }
   var range = getLoopRange();
-  region.style.left = (range.start / ytDuration * 100) + '%';
-  region.style.width = ((range.end - range.start) / ytDuration * 100) + '%';
+  region.style.left = clamp(range.start / ytDuration * 100, 0, 100) + '%';
+  region.style.width = clamp((range.end - range.start) / ytDuration * 100, 0, 100) + '%';
 }
-['start-time', 'end-time'].forEach(function(id) {
+['startTime', 'endTime'].forEach(function(id) {
   document.getElementById(id).addEventListener('input', updateRegion);
 });
-document.getElementById('url-input').addEventListener('keydown', function(event) {
-  if (event.key === 'Enter') loadLessonVideo();
+document.getElementById('urlInput').addEventListener('keydown', function(event) {
+  if (event.key === 'Enter') loadVideo();
 });
 
-var stream = null;
+var sizeMode = 1;
+function cycleLessonSize() {
+  var win = document.getElementById('lessonWindow');
+  var btn = document.getElementById('sizeBtn');
+  sizeMode = (sizeMode + 1) % 3;
+  win.classList.toggle('compact', sizeMode === 0);
+  win.classList.toggle('large', sizeMode === 2);
+  btn.textContent = sizeMode === 0 ? '小' : sizeMode === 1 ? '小窓' : '大';
+}
+function toggleDock() {
+  document.getElementById('lessonWindow').classList.toggle('right');
+}
+
+var cameraStream = null;
 var cameraRunning = false;
 var captureTimer = null;
 var drawRaf = null;
-var frames = [];
+var frameBuffer = [];
 var delaySeconds = 10;
 var mirrored = true;
 var facingMode = 'user';
+var fitMode = 'contain';
 var captureMs = 80;
 
 var liveVideo = document.getElementById('liveVideo');
-var camCanvas = document.getElementById('cam-canvas');
-var camCtx = camCanvas.getContext('2d');
+var mirrorCanvas = document.getElementById('mirrorCanvas');
+var mirrorCtx = mirrorCanvas.getContext('2d');
 var captureCanvas = document.createElement('canvas');
 var captureCtx = captureCanvas.getContext('2d');
 
-function resizeCameraCanvas() {
-  camCanvas.width = camCanvas.offsetWidth || 1;
-  camCanvas.height = camCanvas.offsetHeight || 1;
+function resizeMirror() {
+  var rect = mirrorCanvas.getBoundingClientRect();
+  var scale = window.devicePixelRatio || 1;
+  mirrorCanvas.width = Math.max(1, Math.round(rect.width * scale));
+  mirrorCanvas.height = Math.max(1, Math.round(rect.height * scale));
 }
-window.addEventListener('resize', resizeCameraCanvas);
-resizeCameraCanvas();
+window.addEventListener('resize', resizeMirror);
+resizeMirror();
 
-function toggleMirror() {
-  mirrored = !mirrored;
-  document.getElementById('mirror-btn').classList.toggle('active', mirrored);
-  document.getElementById('mirror-btn').textContent = mirrored ? '反転' : '反転OFF';
-}
-function switchCamera() {
-  if (!cameraRunning) return;
-  facingMode = facingMode === 'user' ? 'environment' : 'user';
-  stopCamera();
-  startCamera();
-}
 function toggleCamera() {
   cameraRunning ? stopCamera() : startCamera();
 }
 async function startCamera() {
-  document.getElementById('camera-error').textContent = '';
+  document.getElementById('cameraError').textContent = '';
   try {
-    stream = await navigator.mediaDevices.getUserMedia({
+    cameraStream = await navigator.mediaDevices.getUserMedia({
       video: {
         facingMode: facingMode,
         width: { ideal: 1280 },
@@ -665,23 +807,23 @@ async function startCamera() {
       },
       audio: false
     });
-    liveVideo.srcObject = stream;
+    liveVideo.srcObject = cameraStream;
     await liveVideo.play();
-    frames = [];
-    resizeCameraCanvas();
+    frameBuffer = [];
+    resizeMirror();
     captureTimer = setInterval(captureFrame, captureMs);
     drawRaf = requestAnimationFrame(drawLoop);
     cameraRunning = true;
-    document.getElementById('cam-cover').classList.add('hidden');
-    document.getElementById('delay-chip').classList.add('show');
-    var btn = document.getElementById('camera-btn');
+    document.getElementById('cameraStart').classList.add('hidden');
+    document.getElementById('delayChip').classList.add('show');
+    var btn = document.getElementById('cameraBtn');
     btn.textContent = '停止';
     btn.className = 'btn stop';
   } catch (error) {
     var message = 'カメラを起動できませんでした';
     if (error.name === 'NotAllowedError') message = 'カメラの許可が必要です';
     if (error.name === 'NotFoundError') message = 'カメラが見つかりません';
-    document.getElementById('camera-error').textContent = message;
+    document.getElementById('cameraError').textContent = message;
   }
 }
 function stopCamera() {
@@ -694,67 +836,85 @@ function stopCamera() {
     cancelAnimationFrame(drawRaf);
     drawRaf = null;
   }
-  if (stream) {
-    stream.getTracks().forEach(function(track) { track.stop(); });
-    stream = null;
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(function(track) { track.stop(); });
+    cameraStream = null;
   }
   liveVideo.srcObject = null;
-  frames = [];
-  camCtx.clearRect(0, 0, camCanvas.width, camCanvas.height);
-  document.getElementById('cam-cover').classList.remove('hidden');
-  document.getElementById('delay-chip').classList.remove('show');
-  var btn = document.getElementById('camera-btn');
+  frameBuffer = [];
+  mirrorCtx.clearRect(0, 0, mirrorCanvas.width, mirrorCanvas.height);
+  document.getElementById('cameraStart').classList.remove('hidden');
+  document.getElementById('delayChip').classList.remove('show');
+  var btn = document.getElementById('cameraBtn');
   btn.textContent = '開始';
   btn.className = 'btn go';
+}
+function switchCamera() {
+  if (!cameraRunning) return;
+  facingMode = facingMode === 'user' ? 'environment' : 'user';
+  stopCamera();
+  startCamera();
+}
+function toggleMirror() {
+  mirrored = !mirrored;
+  var btn = document.getElementById('mirrorBtn');
+  btn.classList.toggle('active', mirrored);
+  btn.textContent = mirrored ? '反転' : '反転OFF';
+}
+function toggleFitMode() {
+  fitMode = fitMode === 'contain' ? 'cover' : 'contain';
+  document.getElementById('fitBtn').textContent = fitMode === 'contain' ? '全身' : '拡大';
 }
 function captureFrame() {
   if (!cameraRunning) return;
   var vw = liveVideo.videoWidth;
   var vh = liveVideo.videoHeight;
   if (!vw || !vh) return;
-  var maxDim = 480;
+  var maxDim = 560;
   if (vw >= vh) {
     captureCanvas.width = maxDim;
     captureCanvas.height = Math.round(maxDim * vh / vw);
   } else {
-    captureCanvas.width = Math.round(maxDim * vw / vh);
     captureCanvas.height = maxDim;
+    captureCanvas.width = Math.round(maxDim * vw / vh);
   }
   captureCtx.drawImage(liveVideo, 0, 0, captureCanvas.width, captureCanvas.height);
   var img = new Image();
-  img.src = captureCanvas.toDataURL('image/jpeg', 0.65);
-  frames.push({ t: Date.now(), img: img });
+  img.src = captureCanvas.toDataURL('image/jpeg', 0.68);
+  frameBuffer.push({ t: Date.now(), img: img });
   var cutoff = Date.now() - (delaySeconds + 6) * 1000;
-  while (frames.length && frames[0].t < cutoff) frames.shift();
+  while (frameBuffer.length && frameBuffer[0].t < cutoff) frameBuffer.shift();
 }
 function drawLoop() {
   drawRaf = requestAnimationFrame(drawLoop);
-  if (!cameraRunning || !frames.length) return;
-  var targetTime = Date.now() - delaySeconds * 1000;
-  var frame = frames[0];
-  for (var i = frames.length - 1; i >= 0; i--) {
-    if (frames[i].t <= targetTime) {
-      frame = frames[i];
+  if (!cameraRunning || !frameBuffer.length) return;
+  var target = Date.now() - delaySeconds * 1000;
+  var frame = frameBuffer[0];
+  for (var i = frameBuffer.length - 1; i >= 0; i--) {
+    if (frameBuffer[i].t <= target) {
+      frame = frameBuffer[i];
       break;
     }
   }
   if (!frame || !frame.img.complete || !frame.img.naturalWidth) return;
-  var cw = camCanvas.width;
-  var ch = camCanvas.height;
+  var cw = mirrorCanvas.width;
+  var ch = mirrorCanvas.height;
   var fw = frame.img.naturalWidth;
   var fh = frame.img.naturalHeight;
-  var scale = Math.min(cw / fw, ch / fh);
-  camCtx.clearRect(0, 0, cw, ch);
-  camCtx.save();
-  camCtx.translate(cw / 2, ch / 2);
-  if (mirrored) camCtx.scale(-1, 1);
-  camCtx.drawImage(frame.img, -fw * scale / 2, -fh * scale / 2, fw * scale, fh * scale);
-  camCtx.restore();
+  var containScale = Math.min(cw / fw, ch / fh);
+  var coverScale = Math.max(cw / fw, ch / fh);
+  var scale = fitMode === 'cover' ? coverScale : containScale;
+  mirrorCtx.clearRect(0, 0, cw, ch);
+  mirrorCtx.save();
+  mirrorCtx.translate(cw / 2, ch / 2);
+  if (mirrored) mirrorCtx.scale(-1, 1);
+  mirrorCtx.drawImage(frame.img, -fw * scale / 2, -fh * scale / 2, fw * scale, fh * scale);
+  mirrorCtx.restore();
 }
-document.getElementById('delay-slider').addEventListener('input', function(event) {
+document.getElementById('delaySlider').addEventListener('input', function(event) {
   delaySeconds = parseInt(event.target.value, 10);
-  document.getElementById('delay-value').textContent = delaySeconds + 's';
-  document.getElementById('delay-chip-text').textContent = delaySeconds + 's 遅延';
+  document.getElementById('delayValue').textContent = delaySeconds + 's';
+  document.getElementById('delayChipText').textContent = delaySeconds + 's 遅延';
 });
 window.addEventListener('beforeunload', stopCamera);
 
@@ -784,6 +944,9 @@ function formatTime(sec) {
 }
 function pad(num) {
   return num < 10 ? '0' + num : '' + num;
+}
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
 }
 </script>
 </body>
