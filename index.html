@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Lesson Player">
+<title>Lesson Player</title>
+<style>
+:root {
+  --bg: #050505;
+  --panel: #101113;
+  --bar: rgba(13, 14, 16, 0.96);
+  --line: rgba(255,255,255,0.1);
+  --text: #f6f6f7;
+  --muted: rgba(255,255,255,0.46);
+  --red: #ff3b30;
+  --green: #30d158;
+}
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+html, body {
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Helvetica Neue", "Hiragino Sans", system-ui, sans-serif;
+}
+button, input {
+  font: inherit;
+}
+.landscape-lock {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: #000;
+  color: var(--muted);
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  line-height: 1.7;
+  padding: 24px;
+}
+.landscape-lock strong {
+  display: block;
+  color: var(--text);
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+@media (orientation: landscape) {
+  .landscape-lock { display: flex; }
+  .app { display: none; }
+}
+.app {
+  height: 100%;
+  height: 100dvh;
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  padding-top: env(safe-area-inset-top, 0);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  background: #000;
+}
+.pane {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: 36px 1fr 38px;
+  background: #000;
+}
+.pane + .pane {
+  border-top: 2px solid rgba(255,255,255,0.16);
+}
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  height: 36px;
+  padding: 0 8px;
+  background: var(--bar);
+  border-bottom: 1px solid var(--line);
+}
+.title {
+  flex: 1;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.btn {
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: rgba(255,255,255,0.08);
+  color: var(--text);
+  padding: 5px 9px;
+  min-height: 28px;
+  font-size: 11px;
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.btn.active {
+  background: var(--red);
+  border-color: var(--red);
+}
+.btn.go {
+  background: var(--green);
+  border-color: var(--green);
+  color: #061006;
+}
+.btn.stop {
+  background: #303134;
+  border-color: #3f4044;
+}
+.stage {
+  min-height: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #000;
+}
+.wide-frame {
+  width: 100%;
+  max-height: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+}
+#yt-player iframe {
+  width: 100% !important;
+  height: 100% !important;
+}
+.placeholder,
+.cam-cover {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px;
+  background: #070707;
+  text-align: center;
+}
+.placeholder.hidden,
+.cam-cover.hidden {
+  display: none;
+}
+.placeholder-mark {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(255,255,255,0.08);
+  color: var(--red);
+  font-size: 18px;
+}
+.placeholder-text,
+.cover-text {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+.strip {
+  height: 38px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+  background: var(--bar);
+  border-top: 1px solid var(--line);
+}
+.time {
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.track {
+  flex: 1;
+  height: 5px;
+  min-width: 44px;
+  position: relative;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.14);
+  cursor: pointer;
+}
+.region,
+.fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  border-radius: 4px;
+  pointer-events: none;
+}
+.region {
+  background: rgba(255,59,48,0.28);
+}
+.fill {
+  width: 0%;
+  background: var(--red);
+}
+.badge {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+.badge.on {
+  color: var(--red);
+}
+#liveVideo {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+#cam-canvas {
+  display: block;
+}
+.delay-chip {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 4;
+  display: none;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.62);
+  border: 1px solid rgba(255,255,255,0.08);
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.delay-chip.show {
+  display: flex;
+}
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--red);
+}
+.cover-error {
+  min-height: 14px;
+  color: #ff8580;
+  font-size: 11px;
+}
+.delay-label {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+input[type="range"] {
+  flex: 1;
+  min-width: 60px;
+  height: 4px;
+  border: 0;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.16);
+  appearance: none;
+  -webkit-appearance: none;
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.45);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+}
+.delay-value {
+  min-width: 32px;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(0,0,0,0.72);
+}
+.modal.open {
+  display: flex;
+}
+.modal-box {
+  width: min(100%, 420px);
+  border-radius: 8px;
+  background: #17181b;
+  border: 1px solid var(--line);
+  padding: 16px;
+}
+.modal-title {
+  margin-bottom: 12px;
+  font-size: 14px;
+  font-weight: 800;
+}
+.modal-input,
+.time-input {
+  width: 100%;
+  border: 1px solid #34363a;
+  border-radius: 7px;
+  background: #232529;
+  color: var(--text);
+  outline: none;
+}
+.modal-input {
+  padding: 10px 11px;
+  font-size: 14px;
+}
+.modal-input:focus,
+.time-input:focus {
+  border-color: var(--red);
+}
+.ab-settings {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 10px;
+}
+.field label {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+.time-input {
+  padding: 8px 9px;
+  text-align: center;
+  font-size: 13px;
+}
+.modal-error {
+  min-height: 16px;
+  margin-top: 8px;
+  color: #ff8580;
+  font-size: 11px;
+}
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+.modal-actions .btn {
+  min-width: 82px;
+}
+</style>
+</head>
+<body>
+<div class="landscape-lock">
+  <div>
+    <strong>縦向きで使います</strong>
+    iPadを縦にして、上に見本、下に自分の稽古を表示します。
+  </div>
+</div>
+
+<div class="modal" id="lesson-modal" onclick="modalBackdrop(event)">
+  <div class="modal-box">
+    <div class="modal-title">見本動画を設定</div>
+    <input class="modal-input" id="url-input" type="text" placeholder="YouTube URL または 11文字の動画ID">
+    <div class="ab-settings">
+      <div class="field">
+        <label for="start-time">A 開始</label>
+        <input class="time-input" id="start-time" type="text" value="0:00" placeholder="0:00">
+      </div>
+      <div class="field">
+        <label for="end-time">B 終了</label>
+        <input class="time-input" id="end-time" type="text" placeholder="終端">
+      </div>
+    </div>
+    <div class="modal-error" id="yt-error"></div>
+    <div class="modal-actions">
+      <button class="btn" type="button" onclick="closeLessonModal()">閉じる</button>
+      <button class="btn active" type="button" onclick="loadLessonVideo()">読込</button>
+    </div>
+  </div>
+</div>
+
+<main class="app">
+  <section class="pane">
+    <div class="toolbar">
+      <div class="title">見本</div>
+      <button class="btn" type="button" onclick="openLessonModal()">URL</button>
+      <button class="btn" id="loop-btn" type="button" onclick="toggleLoop()">AB</button>
+    </div>
+    <div class="stage">
+      <div id="yt-player" class="wide-frame"></div>
+      <button class="placeholder" id="yt-placeholder" type="button" onclick="openLessonModal()">
+        <span class="placeholder-mark">▶</span>
+        <span class="placeholder-text">見本のYouTube動画を読み込む</span>
+      </button>
+    </div>
+    <div class="strip">
+      <span class="time" id="current-time">0:00</span>
+      <div class="track" id="progress-track" onclick="seekByClick(event)">
+        <div class="region" id="progress-region"></div>
+        <div class="fill" id="progress-fill"></div>
+      </div>
+      <span class="time" id="duration-time">--:--</span>
+      <span class="badge" id="loop-badge">AB</span>
+    </div>
+  </section>
+
+  <section class="pane">
+    <div class="toolbar">
+      <div class="title">自分の稽古</div>
+      <button class="btn active" id="mirror-btn" type="button" onclick="toggleMirror()">反転</button>
+      <button class="btn" type="button" onclick="switchCamera()">切替</button>
+      <button class="btn go" id="camera-btn" type="button" onclick="toggleCamera()">開始</button>
+    </div>
+    <div class="stage">
+      <video id="liveVideo" autoplay playsinline muted></video>
+      <canvas id="cam-canvas" class="wide-frame"></canvas>
+      <div class="delay-chip" id="delay-chip">
+        <span class="dot"></span>
+        <span id="delay-chip-text">10s 遅延</span>
+      </div>
+      <div class="cam-cover" id="cam-cover">
+        <button class="btn go" type="button" onclick="toggleCamera()">カメラ開始</button>
+        <div class="cover-text">遅れて映る自分の動きを見ながら稽古できます</div>
+        <div class="cover-error" id="camera-error"></div>
+      </div>
+    </div>
+    <div class="strip">
+      <span class="delay-label">遅延</span>
+      <input id="delay-slider" type="range" min="2" max="30" step="1" value="10">
+      <span class="delay-value" id="delay-value">10s</span>
+    </div>
+  </section>
+</main>
+
+<script>
+(function() {
+  var script = document.createElement('script');
+  script.src = 'https://www.youtube.com/iframe_api';
+  document.head.appendChild(script);
+})();
+
+var ytPlayer = null;
+var ytTimer = null;
+var ytDuration = 0;
+var looping = false;
+
+function onYouTubeIframeAPIReady() {}
+
+function openLessonModal() {
+  document.getElementById('lesson-modal').classList.add('open');
+  setTimeout(function() { document.getElementById('url-input').focus(); }, 60);
+}
+function closeLessonModal() {
+  document.getElementById('lesson-modal').classList.remove('open');
+}
+function modalBackdrop(event) {
+  if (event.target.id === 'lesson-modal') closeLessonModal();
+}
+function extractVideoId(raw) {
+  raw = (raw || '').trim();
+  var patterns = [
+    /[?&]v=([a-zA-Z0-9_-]{11})/,
+    /youtu\.be\/([a-zA-Z0-9_-]{11})/,
+    /embed\/([a-zA-Z0-9_-]{11})/,
+    /^([a-zA-Z0-9_-]{11})$/
+  ];
+  for (var i = 0; i < patterns.length; i++) {
+    var match = raw.match(patterns[i]);
+    if (match) return match[1];
+  }
+  return null;
+}
+function loadLessonVideo() {
+  var videoId = extractVideoId(document.getElementById('url-input').value);
+  var err = document.getElementById('yt-error');
+  if (!videoId) {
+    err.textContent = '有効なYouTube URLまたは動画IDを入力してください';
+    return;
+  }
+  err.textContent = '';
+  document.getElementById('yt-placeholder').classList.add('hidden');
+  if (ytPlayer && ytPlayer.loadVideoById) {
+    ytPlayer.loadVideoById(videoId);
+  } else {
+    ytPlayer = new YT.Player('yt-player', {
+      videoId: videoId,
+      playerVars: { playsinline: 1, rel: 0, modestbranding: 1 },
+      events: { onReady: onYTReady, onStateChange: onYTState }
+    });
+  }
+  closeLessonModal();
+}
+function onYTReady() {
+  ytDuration = ytPlayer.getDuration() || 0;
+  updateDuration();
+  startYTMonitor();
+}
+function onYTState(event) {
+  if (event.data === YT.PlayerState.PLAYING) {
+    ytDuration = ytPlayer.getDuration() || ytDuration;
+    updateDuration();
+  }
+}
+function toggleLoop() {
+  looping = !looping;
+  document.getElementById('loop-btn').classList.toggle('active', looping);
+  document.getElementById('loop-badge').classList.toggle('on', looping);
+  document.getElementById('loop-badge').textContent = looping ? 'AB ON' : 'AB';
+  if (looping && ytPlayer) {
+    ytPlayer.seekTo(parseTime(document.getElementById('start-time').value), true);
+    ytPlayer.playVideo();
+  }
+  updateRegion();
+}
+function startYTMonitor() {
+  if (ytTimer) clearInterval(ytTimer);
+  ytTimer = setInterval(function() {
+    if (!ytPlayer || !ytPlayer.getCurrentTime) return;
+    var current = ytPlayer.getCurrentTime();
+    ytDuration = ytPlayer.getDuration() || ytDuration;
+    document.getElementById('current-time').textContent = formatTime(current);
+    if (ytDuration) {
+      document.getElementById('progress-fill').style.width = (current / ytDuration * 100) + '%';
+      updateDuration();
+    }
+    if (looping) {
+      var start = parseTime(document.getElementById('start-time').value);
+      var endRaw = document.getElementById('end-time').value.trim();
+      var end = endRaw ? parseTime(endRaw) : ytDuration;
+      if (!end || end > ytDuration) end = ytDuration;
+      if (start < end && (current >= end || current < start - 0.5)) {
+        ytPlayer.seekTo(start, true);
+      }
+    }
+  }, 200);
+}
+function updateDuration() {
+  document.getElementById('duration-time').textContent = ytDuration ? formatTime(ytDuration) : '--:--';
+  updateRegion();
+}
+function seekByClick(event) {
+  if (!ytPlayer || !ytDuration) return;
+  var rect = document.getElementById('progress-track').getBoundingClientRect();
+  var ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+  ytPlayer.seekTo(ratio * ytDuration, true);
+}
+function updateRegion() {
+  var region = document.getElementById('progress-region');
+  if (!ytDuration) {
+    region.style.left = '0%';
+    region.style.width = '0%';
+    return;
+  }
+  var start = parseTime(document.getElementById('start-time').value);
+  var endRaw = document.getElementById('end-time').value.trim();
+  var end = endRaw ? parseTime(endRaw) : ytDuration;
+  if (!end || end > ytDuration) end = ytDuration;
+  if (end < start) end = start;
+  region.style.left = (start / ytDuration * 100) + '%';
+  region.style.width = ((end - start) / ytDuration * 100) + '%';
+}
+['start-time', 'end-time'].forEach(function(id) {
+  document.getElementById(id).addEventListener('input', updateRegion);
+});
+document.getElementById('url-input').addEventListener('keydown', function(event) {
+  if (event.key === 'Enter') loadLessonVideo();
+});
+
+var stream = null;
+var cameraRunning = false;
+var captureTimer = null;
+var drawRaf = null;
+var frames = [];
+var delaySeconds = 10;
+var mirrored = true;
+var facingMode = 'user';
+var captureMs = 80;
+
+var liveVideo = document.getElementById('liveVideo');
+var camCanvas = document.getElementById('cam-canvas');
+var camCtx = camCanvas.getContext('2d');
+var captureCanvas = document.createElement('canvas');
+var captureCtx = captureCanvas.getContext('2d');
+
+function resizeCameraCanvas() {
+  camCanvas.width = camCanvas.offsetWidth || 1;
+  camCanvas.height = camCanvas.offsetHeight || 1;
+}
+window.addEventListener('resize', resizeCameraCanvas);
+resizeCameraCanvas();
+
+function toggleMirror() {
+  mirrored = !mirrored;
+  document.getElementById('mirror-btn').classList.toggle('active', mirrored);
+  document.getElementById('mirror-btn').textContent = mirrored ? '反転' : '反転OFF';
+}
+function switchCamera() {
+  if (!cameraRunning) return;
+  facingMode = facingMode === 'user' ? 'environment' : 'user';
+  stopCamera();
+  startCamera();
+}
+function toggleCamera() {
+  cameraRunning ? stopCamera() : startCamera();
+}
+async function startCamera() {
+  document.getElementById('camera-error').textContent = '';
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: facingMode,
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+      },
+      audio: false
+    });
+    liveVideo.srcObject = stream;
+    await liveVideo.play();
+    frames = [];
+    resizeCameraCanvas();
+    captureTimer = setInterval(captureFrame, captureMs);
+    drawRaf = requestAnimationFrame(drawLoop);
+    cameraRunning = true;
+    document.getElementById('cam-cover').classList.add('hidden');
+    document.getElementById('delay-chip').classList.add('show');
+    var btn = document.getElementById('camera-btn');
+    btn.textContent = '停止';
+    btn.className = 'btn stop';
+  } catch (error) {
+    var message = 'カメラを起動できませんでした';
+    if (error.name === 'NotAllowedError') message = 'カメラの許可が必要です';
+    if (error.name === 'NotFoundError') message = 'カメラが見つかりません';
+    document.getElementById('camera-error').textContent = message;
+  }
+}
+function stopCamera() {
+  cameraRunning = false;
+  if (captureTimer) {
+    clearInterval(captureTimer);
+    captureTimer = null;
+  }
+  if (drawRaf) {
+    cancelAnimationFrame(drawRaf);
+    drawRaf = null;
+  }
+  if (stream) {
+    stream.getTracks().forEach(function(track) { track.stop(); });
+    stream = null;
+  }
+  liveVideo.srcObject = null;
+  frames = [];
+  camCtx.clearRect(0, 0, camCanvas.width, camCanvas.height);
+  document.getElementById('cam-cover').classList.remove('hidden');
+  document.getElementById('delay-chip').classList.remove('show');
+  var btn = document.getElementById('camera-btn');
+  btn.textContent = '開始';
+  btn.className = 'btn go';
+}
+function captureFrame() {
+  if (!cameraRunning) return;
+  var vw = liveVideo.videoWidth;
+  var vh = liveVideo.videoHeight;
+  if (!vw || !vh) return;
+  var maxDim = 480;
+  if (vw >= vh) {
+    captureCanvas.width = maxDim;
+    captureCanvas.height = Math.round(maxDim * vh / vw);
+  } else {
+    captureCanvas.width = Math.round(maxDim * vw / vh);
+    captureCanvas.height = maxDim;
+  }
+  captureCtx.drawImage(liveVideo, 0, 0, captureCanvas.width, captureCanvas.height);
+  var img = new Image();
+  img.src = captureCanvas.toDataURL('image/jpeg', 0.65);
+  frames.push({ t: Date.now(), img: img });
+  var cutoff = Date.now() - (delaySeconds + 6) * 1000;
+  while (frames.length && frames[0].t < cutoff) frames.shift();
+}
+function drawLoop() {
+  drawRaf = requestAnimationFrame(drawLoop);
+  if (!cameraRunning || !frames.length) return;
+  var targetTime = Date.now() - delaySeconds * 1000;
+  var frame = frames[0];
+  for (var i = frames.length - 1; i >= 0; i--) {
+    if (frames[i].t <= targetTime) {
+      frame = frames[i];
+      break;
+    }
+  }
+  if (!frame || !frame.img.complete || !frame.img.naturalWidth) return;
+  var cw = camCanvas.width;
+  var ch = camCanvas.height;
+  var fw = frame.img.naturalWidth;
+  var fh = frame.img.naturalHeight;
+  var scale = Math.min(cw / fw, ch / fh);
+  camCtx.clearRect(0, 0, cw, ch);
+  camCtx.save();
+  camCtx.translate(cw / 2, ch / 2);
+  if (mirrored) camCtx.scale(-1, 1);
+  camCtx.drawImage(frame.img, -fw * scale / 2, -fh * scale / 2, fw * scale, fh * scale);
+  camCtx.restore();
+}
+document.getElementById('delay-slider').addEventListener('input', function(event) {
+  delaySeconds = parseInt(event.target.value, 10);
+  document.getElementById('delay-value').textContent = delaySeconds + 's';
+  document.getElementById('delay-chip-text').textContent = delaySeconds + 's 遅延';
+});
+window.addEventListener('beforeunload', stopCamera);
+
+function parseTime(value) {
+  if (!value) return 0;
+  value = value.trim();
+  if (/^\d+(\.\d+)?$/.test(value)) return parseFloat(value);
+  var parts = value.split(':').map(Number);
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  return 0;
+}
+function formatTime(sec) {
+  sec = Math.floor(sec || 0);
+  var h = Math.floor(sec / 3600);
+  var m = Math.floor((sec % 3600) / 60);
+  var s = sec % 60;
+  return h > 0 ? h + ':' + pad(m) + ':' + pad(s) : m + ':' + pad(s);
+}
+function pad(num) {
+  return num < 10 ? '0' + num : '' + num;
+}
+</script>
+</body>
+</html>
